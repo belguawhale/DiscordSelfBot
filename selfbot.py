@@ -211,4 +211,4 @@ async def on_message(message):
 async def reply(message, text):
     await client.send_message(message.channel, message.author.mention + ', ' + text)
 
-client.run('Username (email)','Password')
+client.run('Username','Password')
