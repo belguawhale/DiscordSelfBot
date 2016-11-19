@@ -24,6 +24,7 @@ The bot only responds to the account the bot is running on, obviously.
 ### v0.0.2
 + `//role` and `//info` commands
 + Help information for some commands (if you just do `//role` for example, it will return help for the command `//role`)
+
 ### v0.0.1
 Initial commit
 
