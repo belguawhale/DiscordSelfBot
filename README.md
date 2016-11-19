@@ -9,6 +9,7 @@ Clone this repository, edit the Username and Password fields at the bottom of se
 The bot only responds to the account the bot is running on, obviously.
 ### Commands
 * `//ping`: Simply checks if the bot is running or not.
+* `//info`: Returns information about the bot
 * `//shutdown`: Shuts down the bot. If you are running the auto-restarter, the bot will automatically restart after 5 seconds. Useful for running the bot after you edit the code.
 * `//eval`: Evaluates a Python expression using `eval()` and replies with the result.
 * `//exec`: Executes a Python command and replies with the redirected stdout.
@@ -17,6 +18,14 @@ The bot only responds to the account the bot is running on, obviously.
 * `//removeallrole`: A utility command to remove the specified role from all members in a server who have that role.
 * `//changegame`: Changes your Playing... status on Discord. Note that the Discord client may not update this, but it will show for other users.
 * `//changestatus`: Changes your status to online, idle, dnd, or invisible. This does not work for some reason though.
+* `//role`: Adds or removes a role from a member.
+
+## Changelog
+### v0.0.2
++ `//role` and `//info` commands
++ Help information for some commands (if you just do `//role` for example, it will return help for the command `//role`)
+### v0.0.1
+Initial commit
 
 ## Acknowledgements
 Thanks to SexualRhinoceros for making RH1-N0, a discord bot in Python which inspired me to try writing stuff for Discord. The eval and exec commands are taken from SexualRhinoceros's code.

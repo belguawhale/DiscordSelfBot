@@ -6,6 +6,8 @@ from io import BytesIO, StringIO
 
 client = discord.Client()
 
+VERSION = '0.0.2'
+
 @client.event
 async def on_ready():
     print('Logged in as')
@@ -30,9 +32,12 @@ async def on_message(message):
         await reply(message, 'PONG!')
     elif command.startswith('//pong'):
         await reply(message, '\\*ping\\*')
+    elif command.startswith('//info'):
+        await reply(message, 'I am a Discord selfbot written in Python by belungawhale and am on version ' + VERSION + '. You can get me at https://github.com/belguawhale/DiscordSelfBot.')
     elif command.startswith('//eval'):
         output = None
         if parameters == '':
+            await reply(message, '```//eval <evaluation string>\n\nEvaluates <evaluation string> using Python\'s eval() function and returns a result```')
             return
         try:
             output = eval(parameters)
@@ -44,6 +49,9 @@ async def on_message(message):
         if output:
             await reply(message, '```\n' + str(output) + '\n```')
     elif command.startswith('//exec'):
+        if parameters == '':
+            await reply(message, '```//exec <exec string>\n\nExecutes <exec string> using Python\'s exec() function```')
+            return
         old_stdout = sys.stdout
         redirected_output = sys.stdout = StringIO()
         try:
@@ -162,6 +170,9 @@ async def on_message(message):
                            ]
             await reply(message, '\n'.join(server_info))
     elif command.startswith('//removeallrole'):
+        if parameters == '':
+            await reply(message, '```//removeallrole <role>\n\nRemoves <role> from all members in the current server who have <role>```')
+            return
         #print('Role to remove: ' + parameters)
         if message.server == None or message.server.unavailable:
             await reply(message, 'ERROR: removeallrole command may only be used in a server')
@@ -207,7 +218,45 @@ async def on_message(message):
             await reply(message, ':thumbsup:')
         else:
             await reply(message, 'Status must be online, idle, dnd, or invisible.')
-            
+    elif command.startswith('//role'):
+        if parameters == '':
+            await reply(message, '```//role <add / + / remove / - > <mention> <role name>\n\nAdds or removes <role name> from <mention>```')
+            return
+        if message.server == None or message.server.unavailable:
+            await reply(message, 'ERROR: role must be used in a server')
+            return
+        if len(parameters.split(' ')) < 2:
+            await reply(message, 'ERROR: missing parameters')
+            return
+        if parameters.split(' ')[0].lower() not in ['add', '+', 'remove', '-']:
+            await reply(message, 'ERROR: first parameter must be one of the following: add, +, remove, -')
+            return
+        mode = parameters.split(' ')[0].lower()
+        if not parameters.split(' ')[1].strip('<@!>').isdigit():
+            await reply(message, 'ERROR: second parameter must be a mention')
+            return
+        member_id = parameters.split(' ')[1].strip('<@!>')
+        member = message.server.get_member(member_id)
+        role = None
+        for i in message.server.role_hierarchy:
+            if i.name.lower() == ' '.join(parameters.split(' ')[2:]).lower():
+                role = i
+        if role == None:
+            await reply(message, 'ERROR: role ' + ' '.join(parameters.split(' ')[2:]) + ' was not found')
+            return
+        if member == None:
+            await reply(message, 'ERROR: member with id ' + member_id + ' was not found in this server')
+            return
+        print(mode + ' ' + member.name + ' ' + role.name)
+        if mode in ['add','+']:
+            await client.add_roles(member, role)
+            await reply(message, ':thumbsup:')
+            return
+        elif mode in ['remove', '-']:
+            await client.remove_roles(member, role)
+            await reply(message, ':thumbsup:')
+            return
+
 async def reply(message, text):
     await client.send_message(message.channel, message.author.mention + ', ' + text)
 
