@@ -6,7 +6,7 @@ from io import BytesIO, StringIO
 
 client = discord.Client()
 
-VERSION = '0.0.2'
+VERSION = '0.0.2.1'
 
 @client.event
 async def on_ready():
@@ -260,4 +260,4 @@ async def on_message(message):
 async def reply(message, text):
     await client.send_message(message.channel, message.author.mention + ', ' + text)
 
-client.run('Username','Password')
+client.run('Email','Password')

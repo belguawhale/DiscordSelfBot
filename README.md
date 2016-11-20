@@ -3,7 +3,7 @@ A selfbot (runs on your user account and provides extra functionality) for Disco
 You can find me on Discord as belungawhale#4813.
 
 ## Installation
-Clone this repository, edit the Username and Password fields at the bottom of selfbot.py, and run `python selfbot.py`. If you want the bot to auto-restart on Windows, run the provided selfbot.bat file.
+Clone this repository, edit the Email and Password fields at the bottom of selfbot.py, and run `python selfbot.py` (on UNIX based systems, you may need to run `python3 selfbot.py` or `python3.5 selfbot.py`. If you want the bot to auto-restart on Windows, run the provided selfbot.bat file.
 
 ## Documentation
 The bot only responds to the account the bot is running on, obviously.
@@ -21,9 +21,12 @@ The bot only responds to the account the bot is running on, obviously.
 * `//role`: Adds or removes a role from a member.
 
 ## Changelog
+### v0.0.2.1
+Changed Username to Email since it was confusing
+
 ### v0.0.2
-+ `//role` and `//info` commands
-+ Help information for some commands (if you just do `//role` for example, it will return help for the command `//role`)
+Added `//role` and `//info` commands
+Added Help information for some commands (if you just do `//role` for example, it will return help for the command `//role`)
 
 ### v0.0.1
 Initial commit
