@@ -18,15 +18,20 @@ The bot only responds to the account the bot is running on, obviously.
 * `//removeallrole`: A utility command to remove the specified role from all members in a server who have that role.
 * `//changegame`: Changes your Playing... status on Discord. Note that the Discord client may not update this, but it will show for other users.
 * `//changestatus`: Changes your status to online, idle, dnd, or invisible. This does not work for some reason though.
-* `//role`: Adds or removes a role from a member.
+* `//role`: Adds or removes a role from specified members.
 
 ## Changelog
+### v0.0.3
+Changed: `//role` now takes any number of mentions rather than just one mention
+Changed: Bot now edits the message instead of sending a new message
+Changed: Some formatting stuff like bolding some things in reply message
+
 ### v0.0.2.1
-Changed Username to Email since it was confusing
+Changed: Username to Email since it was confusing
 
 ### v0.0.2
-Added `//role` and `//info` commands
-Added Help information for some commands (if you just do `//role` for example, it will return help for the command `//role`)
+Added: `//role` and `//info` commands
+Added: Help information for some commands (if you just do `//role` for example, it will return help for the command `//role`)
 
 ### v0.0.1
 Initial commit

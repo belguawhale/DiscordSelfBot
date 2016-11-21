@@ -6,7 +6,7 @@ from io import BytesIO, StringIO
 
 client = discord.Client()
 
-VERSION = '0.0.2.1'
+VERSION = '0.0.3'
 
 @client.event
 async def on_ready():
@@ -26,7 +26,7 @@ async def on_message(message):
     command = message.content
     parameters = ' '.join(message.content.strip().split(' ')[1:])
     if command.startswith('//shutdown'):
-        await reply(message, ':thumbsup:')
+        await reply(message, 'shutting down...')
         await client.logout()
     elif command.startswith('//ping'):
         await reply(message, 'PONG!')
@@ -86,7 +86,7 @@ async def on_message(message):
                     temp_user = i
                     break
             if temp_user == None:
-                await reply(message, 'Could not get info on user ' + user_check)
+                await reply(message, 'Could not get info on user **' + user_check + '**')
                 return
             user_id = temp_user.id
         if message.server:
@@ -184,7 +184,7 @@ async def on_message(message):
                 if role.name.lower() == parameters.lower():
                     server_role = role
             if server_role == None:
-                await reply(message, 'ERROR: Could not find a role named ' + parameters + ' in the server')
+                await reply(message, 'ERROR: Could not find a role named **' + parameters + '** in the server')
                 return
             #print(server_role.name)
             members_with_role = []
@@ -194,14 +194,14 @@ async def on_message(message):
             #print(members_with_role)
             for member in members_with_role:
                 await client.remove_roles(member, server_role)
-            await reply(message, 'Removed ' + server_role.name + ' from ' + str(len(members_with_role)) + ' members')
+            await reply(message, 'Removed **' + server_role.name + '** from **' + str(len(members_with_role)) + '** members')
     elif command.startswith('//changegame'):
         if parameters in ['none','None']:
             await client.change_presence(game=None,status=message.server.me.status)
             await reply(message, ':thumbsup:')
         else:
             await client.change_presence(game=discord.Game(name=parameters),status=message.server.me.status)
-            print(parameters)
+            #print(parameters)
             await reply(message, ':thumbsup:')
     elif command.startswith('//changestatus'):
         string_status = str(parameters).lower()
@@ -220,7 +220,7 @@ async def on_message(message):
             await reply(message, 'Status must be online, idle, dnd, or invisible.')
     elif command.startswith('//role'):
         if parameters == '':
-            await reply(message, '```//role <add / + / remove / - > <mention> <role name>\n\nAdds or removes <role name> from <mention>```')
+            await reply(message, '```//role <add / + / remove / - > <mentions> <role name>\n\nAdds or removes <role name> from each member in <mentions>```')
             return
         if message.server == None or message.server.unavailable:
             await reply(message, 'ERROR: role must be used in a server')
@@ -232,32 +232,46 @@ async def on_message(message):
             await reply(message, 'ERROR: first parameter must be one of the following: add, +, remove, -')
             return
         mode = parameters.split(' ')[0].lower()
-        if not parameters.split(' ')[1].strip('<@!>').isdigit():
-            await reply(message, 'ERROR: second parameter must be a mention')
+        mentions = []
+        for parameter in parameters.split(' '):
+            if parameter.strip('<@!>').isdigit():
+                mentions.append(parameter.strip('<@!>'))
+        #print(mentions)
+        if mentions == []:
+            await reply(message, 'ERROR: no mentions were found!')
             return
-        member_id = parameters.split(' ')[1].strip('<@!>')
-        member = message.server.get_member(member_id)
+        members = []
+        for member_id in mentions:
+            temp_member = message.server.get_member(member_id)
+            if temp_member:
+                members.append(temp_member)
+        if members == []:
+            await reply(message, 'ERROR: no valid users were found!')
+            return
         role = None
+        #print (parameters.split('>')[-1].lower().strip())
         for i in message.server.role_hierarchy:
-            if i.name.lower() == ' '.join(parameters.split(' ')[2:]).lower():
+            if i.name.lower() == parameters.split('>')[-1].lower().strip():
                 role = i
         if role == None:
-            await reply(message, 'ERROR: role ' + ' '.join(parameters.split(' ')[2:]) + ' was not found')
+            await reply(message, 'ERROR: role **' + parameters.split('>')[-1].lower().strip() + '** was not found')
             return
-        if member == None:
-            await reply(message, 'ERROR: member with id ' + member_id + ' was not found in this server')
-            return
-        print(mode + ' ' + member.name + ' ' + role.name)
+        #print(mode + ' ' + member.name + ' ' + role.name)
+        reply_msg = ''
         if mode in ['add','+']:
-            await client.add_roles(member, role)
-            await reply(message, ':thumbsup:')
-            return
+            for member in members:
+                await client.add_roles(member, role)
+            reply_msg = 'Successfully added **' + role.name + '** to **' + str(len(members)) + '** members'
         elif mode in ['remove', '-']:
-            await client.remove_roles(member, role)
-            await reply(message, ':thumbsup:')
-            return
+            for member in members:
+                await client.remove_roles(member, role)
+            reply_msg = 'Successfully removed **' + role.name + '** from **' + str(len(members)) + '** members'
+        await reply(message, reply_msg)
+
+##async def reply(message, text):
+##    await client.send_message(message.channel, message.author.mention + ', ' + text)
 
 async def reply(message, text):
-    await client.send_message(message.channel, message.author.mention + ', ' + text)
+    await client.edit_message(message, message.author.mention + ', ' + text)
 
 client.run('Email','Password')
