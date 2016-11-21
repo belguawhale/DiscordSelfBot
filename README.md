@@ -23,7 +23,9 @@ The bot only responds to the account the bot is running on, obviously.
 ## Changelog
 ### v0.0.3
 Changed: `//role` now takes any number of mentions rather than just one mention
+
 Changed: Bot now edits the message instead of sending a new message
+
 Changed: Some formatting stuff like bolding some things in reply message
 
 ### v0.0.2.1
@@ -31,6 +33,7 @@ Changed: Username to Email since it was confusing
 
 ### v0.0.2
 Added: `//role` and `//info` commands
+
 Added: Help information for some commands (if you just do `//role` for example, it will return help for the command `//role`)
 
 ### v0.0.1
