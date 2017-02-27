@@ -8,19 +8,33 @@ Clone this repository, edit the Email and Password fields at the bottom of selfb
 ## Documentation
 The bot only responds to the account the bot is running on, obviously.
 ### Commands
-* `//ping`: Simply checks if the bot is running or not.
-* `//info`: Returns information about the bot
-* `//shutdown`: Shuts down the bot. If you are running the auto-restarter, the bot will automatically restart after 5 seconds. Useful for running the bot after you edit the code.
-* `//eval`: Evaluates a Python expression using `eval()` and replies with the result.
-* `//exec`: Executes a Python command and replies with the redirected stdout.
-* `//userinfo`: Gets information of a user by mention, id, or name. It will give information on the discord.Member if the command is run in a server, otherwise it will get information on the discord.User.
-* `//serverinfo`: Gets information on the server the command is used in.
-* `//removeallrole`: A utility command to remove the specified role from all members in a server who have that role.
-* `//changegame`: Changes your Playing... status on Discord. Note that the Discord client may not update this, but it will show for other users.
-* `//changestatus`: Changes your status to online, idle, dnd, or invisible. This does not work for some reason though.
-* `//role`: Adds or removes a role from specified members.
+Use `//list` to list all commands, `//alias list` to list all aliases, `//help command` to return help for a command, and `//alias show alias` to show what alias is an alias for.
 
 ## Changelog
+### v0.1.0
+#### MAJOR UPDATE!
+I did a complete rewrite of the bot, using a brand new commands parser I wrote!
+
+Added: Aliases! Try `//alias` for documention. Examples: `//alias add time eval datetime.datetime.now()` `//alias add mute role add {0} Muted` (the {0} inputs all parameters. Use {1} for first parameter, {2} for second parameter, etc.)
+
+Added: Help command! Try `//help command`
+
+Added: List command to display all commands!
+
+Added: Reply command (aliases are especially fun with this one! Example: `//alias add give reply gives a {1} to {2}`)
+
+Added: Error handling for errors!
+
+Changed: Userinfo and serverinfo commands now display time since joined
+
+Changed: Rewrites to many commands to make them more streamlined
+
+Changed: `//ping` now displays latency!
+
+Changed: `//eval` and `//exec` have a better-looking interface
+
+Changed: Many bugfixes
+
 ### v0.0.3
 Changed: `//role` now takes any number of mentions rather than just one mention
 
