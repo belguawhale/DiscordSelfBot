@@ -10,13 +10,14 @@ from io import BytesIO, StringIO
 
 client = discord.Client()
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 PREFIX = "//"
 
 MAX_RECURSION_DEPTH = 10
 
 commands = {}
 aliases = {}
+scheduler = {}
 
 if os.path.isfile('aliases.json'):
     with open('aliases.json', 'r') as aliases_file:
@@ -36,6 +37,19 @@ def cmd(name, description, *aliases, server=True, pm=True):
         return func
     return real_decorator
 
+async def scheduler_loop():
+    while not client.is_closed:
+        for i in list(scheduler):
+            if scheduler[i][0] < datetime.datetime.now():
+                scheduler_array = scheduler[i][:]
+                del scheduler[i]
+                command_string = scheduler_array[2]
+                print("Executing scheduled command with id {}".format(i))
+                command = command_string.split(' ')[0]
+                parameters = ' '.join(command_string.split(' ')[1:])
+                await parse_command(scheduler_array[1], command, parameters, scheduler_array[3])
+        await asyncio.sleep(0.1)
+                
 @client.event
 async def on_ready():
     await client.change_presence(status=discord.Status.invisible)
@@ -75,7 +89,7 @@ async def parse_command(message, command, parameters, recursion=0):
             return
         else:
             try:
-                await commands[command][0](message, parameters)
+                await commands[command][0](message, parameters, recursion=recursion)
             except:
                 traceback.print_exc()
                 try:
@@ -90,19 +104,19 @@ async def parse_command(message, command, parameters, recursion=0):
         await reply(message, "Invalid command.")
 
 @cmd("shutdown", "```\n{0}shutdown takes no arguments\n\nShuts the bot down.```")
-async def cmd_shutdown(message, parameters):
+async def cmd_shutdown(message, parameters, recursion=0):
     await reply(message, 'Shutting down...')
     await client.logout()
 
 @cmd("ping", "```\n{0}ping takes no arguments\n\nTests the bot's connectivity.```")
-async def cmd_ping(message, parameters):
+async def cmd_ping(message, parameters, recursion=0):
     ts = message.timestamp
     new_msg = await reply(message, 'PONG!')
     latency = new_msg.edited_timestamp - ts
     await reply(message, "PONG! {}ms".format(latency.microseconds // 1000))
 
 @cmd("eval", "```\n{0}eval <evaluation string>\n\nEvaluates <evaluation string> using Python's eval() function and returns a result.```")
-async def cmd_eval(message, parameters):
+async def cmd_eval(message, parameters, recursion=0):
     output = None
     if parameters == '':
         await reply(message, commands['eval'][1].format(PREFIX))
@@ -118,7 +132,7 @@ async def cmd_eval(message, parameters):
     await reply(message, "**Input:**```\n{}\n```\n**Output:**```\n{}\n```".format(parameters, output))
 
 @cmd("exec", "```\n{0}exec <exec string>\n\nExecutes <exec string> using Python's exec() function.```")
-async def cmd_exec(message, parameters):
+async def cmd_exec(message, parameters, recursion=0):
     if parameters == '':
         await reply(message, commands['exec'][1].format(PREFIX))
         return
@@ -136,11 +150,11 @@ async def cmd_exec(message, parameters):
     await reply(message, "**Input:**```\n{}\n```\n**Output:**```\n{}\n```".format(parameters, redirected_output.getvalue()))
 
 @cmd("info", "```\n{0}info takes no arguments\n\nDisplays information on the selfbot.```", "")
-async def cmd_info(message, parameters):
+async def cmd_info(message, parameters, recursion=0):
     await reply(message, 'I am a Discord selfbot written in Python by belungawhale#4813 and am on version ' + VERSION + '. You can get me at https://github.com/belguawhale/DiscordSelfBot.')
 
 @cmd("userinfo", "```\n{0}userinfo [<user>]\n\nDisplays information about [<user>].```", "uinfo")
-async def cmd_userinfo(message, parameters):
+async def cmd_userinfo(message, parameters, recursion=0):
     msg_server = message.server
     user = parameters.strip("<!@>")
     if not user:
@@ -178,7 +192,7 @@ async def cmd_userinfo(message, parameters):
     await reply(message, msg.format(member=member, server=server))
 
 @cmd("serverinfo", "```\n{0}serverinfo takes no arguments\n\nDisplays information about the server this command was used in.```", "sinfo", pm=False)
-async def cmd_serverinfo(message, parameters):
+async def cmd_serverinfo(message, parameters, recursion=0):
     server = message.server
     text = 0
     voice = 0
@@ -202,13 +216,13 @@ async def cmd_serverinfo(message, parameters):
     if len(server.roles) > 50:
         msg += '             roles: {} roles, showing top 50\n{}\n'.format(len(server.roles), ', '.join([x.name for x in server.role_hierarchy][0:50]))
     else:
-        msg += '             roles: {} roles\n{}'.format(len(server.role_hierarchy), ', '.join(map(lambda x: x.name, server.role_hierarchy)))
+        msg += '             roles: {} roles\n{}\n'.format(len(server.role_hierarchy), ', '.join(map(lambda x: x.name, server.role_hierarchy)))
     msg += '            emojis: {}\n'.format(len(server.emojis))
     msg += '              icon:```{server.icon_url}'
     await reply(message, msg.format(server=server))
 
 @cmd("removeallrole", "```\n{0}removeallrole <role name>\n\nRemoves <role name> from all members with that role.```", "rar", pm=False)
-async def cmd_removeallrole(message, parameters):
+async def cmd_removeallrole(message, parameters, recursion=0):
     if parameters == "":
         await reply(message, commands['removeallrole'][1].format(PREFIX))
         return
@@ -230,7 +244,7 @@ async def cmd_removeallrole(message, parameters):
         await reply(message, "ERROR: could not find role named {}. Please ensure the role is spelled correctly and your capitalization is correct.".format(parameters))
 
 @cmd("changegame", "```\n{0}changegame [<game>]\n\nChanges your Playing... message to [<game>] or unsets it.```")
-async def cmd_changegame(message, parameters):
+async def cmd_changegame(message, parameters, recursion=0):
     if message.server:
         me = message.server.me
     else:
@@ -243,7 +257,7 @@ async def cmd_changegame(message, parameters):
     await reply(message, ":thumbsup:")
 
 @cmd("changestatus", "```\n{0}changestatus <status>\n\nChanges your status. Status must be one of: online, idle, dnd, invisible.```")
-async def cmd_changestatus(message, parameters):
+async def cmd_changestatus(message, parameters, recursion=0):
     parameters = parameters.lower()
     statusmap = {'online' : discord.Status.online,
                  'idle' : discord.Status.idle,
@@ -264,7 +278,7 @@ async def cmd_changestatus(message, parameters):
     await reply(message, msg)
             
 @cmd("role", "```\n{0}role <add | remove> <mention1 [mention2 ...]> <role name>\n\nAdds or removes <role name> from each member in <mentions>.```", pm=False)
-async def cmd_role(message, parameters):
+async def cmd_role(message, parameters, recursion=0):
     server = message.server
     params = parameters.split(' ')
     if len(params) < 3:
@@ -308,7 +322,7 @@ async def cmd_role(message, parameters):
     await reply(message, msg.format(role.name, len(members), '' if len(members) == 1 else 's'))
 
 @cmd("help", "```\n{0}help <command>\n\nDisplays hopefully helpful information on <command>. Try {0}list for a listing of commands.```")
-async def cmd_help(message, parameters):
+async def cmd_help(message, parameters, recursion=0):
     if parameters == "":
         parameters = "help"
     if parameters in commands:
@@ -317,15 +331,29 @@ async def cmd_help(message, parameters):
         await reply(message, "Command {} does not exist.".format(parameters))
 
 @cmd("list", "```\n{0}list takes no arguments\n\nDisplays a listing of commands.```")
-async def cmd_list(message, parameters):
+async def cmd_list(message, parameters, recursion=0):
     await reply(message, "Available commands: {}".format(', '.join(sorted(commands))))
 
 @cmd("reply", "```\n{0}reply <message>\n\nReplies with <message>. Use with aliases for more fun!```")
-async def cmd_reply(message, parameters):
+async def cmd_reply(message, parameters, recursion=0):
     await reply(message, parameters)
 
+@cmd("say", "```\n{0}say <channel> <message>\n\nSends <message> to <channel>.```")
+async def cmd_say(message, parameters, recursion=0):
+    channel = parameters.split(' ')[0].strip("<#>")
+    msg = ' '.join(parameters.split(' ')[1:])
+    chan = client.get_channel(channel)
+    if chan:
+        if msg:
+            await client.send_message(chan, msg)
+            await reply(message, ":thumbsup:")
+        else:
+            await reply(message, "ERROR: Cannot send an empty message.")
+    else:
+        await reply(message, "ERROR: Channel {} not found.".format(channel))
+
 @cmd("alias", "```\n{0}alias <add | edit | remove | list | show> <alias name> [<command string>]\n\nManipulates aliases.```")
-async def cmd_alias(message, parameters):
+async def cmd_alias(message, parameters, recursion=0):
     params = parameters.split(' ')
     if len(params) == 0:
         await reply(message, commands['alias'][1].format(PREFIX))
@@ -346,6 +374,9 @@ async def cmd_alias(message, parameters):
     if not alias in aliases and action not in ['add', '+']:
         await reply(message, "ERROR: alias {} does not exist!".format(alias))
         return
+    if alias in aliases and action in ['add', '+']:
+        await reply(message, "ERROR: alias {} already exists. Use `{}alias edit` instead.".format(alias, PREFIX))
+        return
     if len(params) == 2:
         if action in ['add', '+', 'edit', '=']:
             await reply(message, "```\n{0}alias {1} {2} <command string>```".format(PREFIX, action, alias))
@@ -360,6 +391,51 @@ async def cmd_alias(message, parameters):
         await reply(message, "Successfully {} alias **{}**.".format(action + "ed", alias))
     with open('aliases.json', 'w') as aliases_file:
         json.dump(aliases, aliases_file)
+
+@cmd("scheduler", "```\n{0}scheduler <add | remove | list | show> <id or date string> [<command string>]\n\nSchedules commands. Date string is in the "
+                  "format #d#h#m#s, corresponding to days, hours, minutes, and seconds. You may omit up to 3 of the aforementioned categories.```")
+async def cmd_scheduler(message, parameters, recursion=0):
+    params = parameters.split(' ')
+    if len(params) == 0:
+        await reply(message, commands['scheduler'][1].format(PREFIX))
+        return
+    action = params[0]
+    if action not in ['add', '+', 'remove', 'del', 'delete', '-', 'list', 'show']:
+        await reply(message, commands['scheduler'][1].format(PREFIX))
+        return
+    if len(params) == 1:
+        if action in ['add', '+']:
+            await reply(message, "```\n{0}scheduler {1} <date string> <command string>```".format(PREFIX, action))
+        elif action in ['show', 'remove', '-', 'del', 'delete']:
+            await reply(message, "```\n{0}scheduler {1} <id>```".format(PREFIX, action))
+        elif action == 'list':
+            await reply(message, "Currently scheduled commands: ```\n{}\n```".format('\n'.join(sorted(["{} (in {}): {}".format(
+                x, strfdelta(scheduler[x][0] - datetime.datetime.now()), scheduler[x][2]) for x in scheduler]))))
+        return
+    iddatestring = params[1]
+    if not iddatestring in map(str, scheduler) and action not in ['add', '+']:
+        await reply(message, "ERROR: id {} does not exist!".format(iddatestring))
+        return 
+    if len(params) == 2:
+        if action in ['add', '+', 'edit', '=']:
+            await reply(message, "```\n{0}alias {1} {2} <command string>```".format(PREFIX, action, iddatestring))
+        elif action == 'show':
+            iddatestring = int(iddatestring)
+            await reply(message, "ID **{}** is scheduled to run in **{}**: ```\n{}\n```".format(
+                        iddatestring, strfdelta(scheduler[iddatestring][0] - datetime.datetime.now()), scheduler[iddatestring][2]))
+        elif action in ['remove', 'del', 'delete', '-']:
+            iddatestring = int(iddatestring)
+            del scheduler[iddatestring]
+            await reply(message, "Successfully deleted scheduled command with id **{}**.".format(iddatestring))
+    else:
+        if scheduler:
+            schid = max(scheduler) + 1
+        else:
+            schid = 0
+        commandstring = ' '.join(params[2:])
+        delta = convdatestring(iddatestring)
+        scheduler[schid] = [datetime.datetime.now() + delta, message, commandstring, recursion + 1]
+        await reply(message, "Successfully scheduled command with id **{}** to run in **{}**: ```\n{}\n```".format(schid, strfdelta(delta), commandstring))
                     
 def strtodatetime(string):
     return datetime.datetime.strptime(string, '%Y-%m-%d %H:%M:%S.%f')
@@ -380,8 +456,34 @@ def strfdelta(delta):
     reply_msg = reply_msg[:-1]
     return reply_msg
 
+def convdatestring(datestring):
+    datestring = datestring.strip(' ,')
+    datearray = []
+    funcs = {'d' : lambda x: x * 24 * 60 * 60,
+             'h' : lambda x: x * 60 * 60,
+             'm' : lambda x: x * 60,
+             's' : lambda x: x}
+    currentnumber = ''
+    for char in datestring:
+        if char.isdigit():
+            currentnumber += char
+        else:
+            if currentnumber == '':
+                continue
+            datearray.append((int(currentnumber), char))
+            currentnumber = ''
+    seconds = 0
+    if currentnumber:
+        seconds += int(currentnumber)
+    for i in datearray:
+        if i[1] in funcs:
+            seconds += funcs[i[1]](i[0])
+    return datetime.timedelta(seconds=seconds)
+
 async def reply(message, text):
-    return (await client.edit_message(message, message.author.mention + ', ' + text))
+    return (await client.edit_message(message, text))
+
+client.loop.create_task(scheduler_loop())
 
 
 
@@ -407,4 +509,14 @@ async def reply(message, text):
 
 
 
-client.run('Email','Password')
+
+
+
+
+
+
+
+
+
+
+client.run('Email', 'Password')
