@@ -11,6 +11,15 @@ The bot only responds to the account the bot is running on, obviously.
 Use `//list` to list all commands, `//alias list` to list all aliases, `//help command` to return help for a command, and `//alias show alias` to show what alias is an alias for.
 
 ## Changelog
+### v0.1.2
+Added: Variants of eval and exec. `//oldeval` and `//oldexec` show only the output, and `//silenteval` and `//silentexec` return nothing.
+
+Added: Echo command. This command simply sends a message to the same channel this command was used in.
+
+Added: Timer command. This displays a running timer.
+
+Changed: Say command can send messages to users too.
+
 ### v0.1.1
 Added: Scheduler command! Use this to schedule commands. Examples: `//scheduler add 1m reply 1 minute passed!` `//scheduler add 5h role - @baduser Muted` Note: All scheduled commands are lost on bot restart due to it requiring a Message object.
 

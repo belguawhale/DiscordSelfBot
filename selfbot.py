@@ -10,7 +10,7 @@ from io import BytesIO, StringIO
 
 client = discord.Client()
 
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 PREFIX = "//"
 
 MAX_RECURSION_DEPTH = 10
@@ -115,39 +115,80 @@ async def cmd_ping(message, parameters, recursion=0):
     latency = new_msg.edited_timestamp - ts
     await reply(message, "PONG! {}ms".format(latency.microseconds // 1000))
 
-@cmd("eval", "```\n{0}eval <evaluation string>\n\nEvaluates <evaluation string> using Python's eval() function and returns a result.```")
-async def cmd_eval(message, parameters, recursion=0):
+async def _eval(message, parameters, recursion=0):
     output = None
     if parameters == '':
-        await reply(message, commands['eval'][1].format(PREFIX))
-        return
+        return (commands['eval'][1].format(PREFIX), 1)
     try:
         output = eval(parameters)
     except:
-        await reply(message, '```\n' + str(traceback.format_exc()) + '\n```')
         traceback.print_exc()
-        return
+        return (str(traceback.format_exc()), 2)
     if asyncio.iscoroutine(output):
         output = await output
-    await reply(message, "**Input:**```\n{}\n```\n**Output:**```\n{}\n```".format(parameters, output))
+    return (output, 0)
+    
+@cmd("eval", "```\n{0}eval <evaluation string>\n\nEvaluates <evaluation string> using Python's eval() function and returns a result.```")
+async def cmd_eval(message, parameters, recursion=0):
+    output, errorcode = await _eval(message, parameters, recursion)
+    if errorcode == 1:
+        await reply(message, output)
+    elif errorcode == 2:
+        await reply(message, "**Eval input:**```py\n{}\n```\n**Output (error):**```py\n{}\n```".format(parameters, output))
+    else:
+        await reply(message, "**Eval input:**```py\n{}\n```\n**Output:**```py\n{}\n```".format(parameters, output))
+
+@cmd("oldeval", "```\n{0}oldeval <evaluation string>\n\nEvaluates <evaluation string> using Python's eval() function and returns only the result.```")
+async def cmd_oldeval(message, parameters, recursion=0):
+    output, errorcode = await _eval(message, parameters, recursion)
+    if errorcode == 1:
+        await reply(message, output)
+    else:
+        await reply(message, "```py\n{}\n```".format(output))
+
+@cmd("silenteval", "```\n{0}silenteval <evaluation string>\n\nEvaluates <evaluation string> using Python's eval() function. Mainly used for coroutines.```")
+async def cmd_silenteval(message, parameters, recursion=0):
+    output, errorcode = await _eval(message, parameters, recursion)
+
+async def _exec(message, parameters, recursion=0):
+    if parameters == '':
+        return (commands['exec'][1].format(PREFIX), 1)
+    old_stdout = sys.stdout
+    redirected_output = sys.stdout = StringIO()
+    result = None
+    try:
+        exec(parameters)
+        result = (redirected_output.getvalue(), 0)
+    except Exception:
+        traceback.print_exc()
+        result = (str(traceback.format_exc()), 2)
+    finally:
+        sys.stdout = old_stdout
+    return result
 
 @cmd("exec", "```\n{0}exec <exec string>\n\nExecutes <exec string> using Python's exec() function.```")
 async def cmd_exec(message, parameters, recursion=0):
-    if parameters == '':
-        await reply(message, commands['exec'][1].format(PREFIX))
-        return
-    old_stdout = sys.stdout
-    redirected_output = sys.stdout = StringIO()
-    try:
-        exec(parameters)
-    except Exception:
-        formatted_lines = traceback.format_exc().splitlines()
-        await reply(message, '```py\n{}\n{}\n```'.format(formatted_lines[-1], '\n'.join(formatted_lines[4:-1])))
-        return
-    finally:
-        sys.stdout = old_stdout
+    output, errorcode = await _exec(message, parameters, recursion)
+    if errorcode == 1:
+        await reply(message, output)
+    elif errorcode == 2:
+        await reply(message, "**Exec input:**```py\n{}\n```\n**Output (error):**```py\n{}\n```".format(parameters, output))
+    else:
+        await reply(message, "**Exec input:**```py\n{}\n```\n**Output:**```py\n{}\n```".format(parameters, output))
 
-    await reply(message, "**Input:**```\n{}\n```\n**Output:**```\n{}\n```".format(parameters, redirected_output.getvalue()))
+@cmd("oldexec", "```\n{0}oldexec <exec string>\n\nExecutes <exec string> using Python's exec() function.```")
+async def cmd_oldexec(message, parameters, recursion=0):
+    output, errorcode = await _exec(message, parameters, recursion)
+    if errorcode == 1:
+        await reply(message, output)
+    elif errorcode == 2:
+        await reply(message, "```py\n{}\n```".format(output))
+    else:
+        await reply(message, output)
+
+@cmd("silentexec", "```\n{0}silentexec <exec string>\n\nSilently executes <exec string> using Python's exec() function.```")
+async def cmd_silentexec(message, parameters, recursion=0):
+    output, errorcode = await _exec(message, parameters, recursion)
 
 @cmd("info", "```\n{0}info takes no arguments\n\nDisplays information on the selfbot.```", "")
 async def cmd_info(message, parameters, recursion=0):
@@ -338,19 +379,29 @@ async def cmd_list(message, parameters, recursion=0):
 async def cmd_reply(message, parameters, recursion=0):
     await reply(message, parameters)
 
-@cmd("say", "```\n{0}say <channel> <message>\n\nSends <message> to <channel>.```")
+@cmd("say", "```\n{0}say <target> <message>\n\nSends <message> to <target>.```")
 async def cmd_say(message, parameters, recursion=0):
-    channel = parameters.split(' ')[0].strip("<#>")
+    target = parameters.split(' ')[0].strip("<@!#>")
     msg = ' '.join(parameters.split(' ')[1:])
-    chan = client.get_channel(channel)
-    if chan:
+    tgt = client.get_channel(target)
+    if not tgt:
+        tgt = discord.utils.get(client.get_all_members(), id=target)
+    if tgt:
         if msg:
-            await client.send_message(chan, msg)
+            await client.send_message(tgt, msg)
             await reply(message, ":thumbsup:")
         else:
             await reply(message, "ERROR: Cannot send an empty message.")
     else:
-        await reply(message, "ERROR: Channel {} not found.".format(channel))
+        await reply(message, "ERROR: Target with id {} not found.".format(target))
+
+@cmd("echo", "```\n{0}echo <message>\n\nSends <message> to the same channel the command was used in.```")
+async def cmd_echo(message, parameters, recursion=0):
+    if parameters == "":
+        await reply(message, "ERROR: Cannot send an empty message.")
+        return
+    await client.send_message(message.channel, parameters)
+    await reply(message, ":thumbsup:")
 
 @cmd("alias", "```\n{0}alias <add | edit | remove | list | show> <alias name> [<command string>]\n\nManipulates aliases.```")
 async def cmd_alias(message, parameters, recursion=0):
@@ -436,6 +487,19 @@ async def cmd_scheduler(message, parameters, recursion=0):
         delta = convdatestring(iddatestring)
         scheduler[schid] = [datetime.datetime.now() + delta, message, commandstring, recursion + 1]
         await reply(message, "Successfully scheduled command with id **{}** to run in **{}**: ```\n{}\n```".format(schid, strfdelta(delta), commandstring))
+
+@cmd("timer", "```\n{0}timer <date string>\n\nDisplays a running timer. Date string is in the format #d#h#m#s, corresponding to days, "
+              "hours, minutes, and seconds. You may omit up to 3 of the aforementioned categories.```")
+async def cmd_timer(message, parameters, recursion=0):
+    if parameters == '':
+        await reply(message, commands['timer'][1].format(PREFIX))
+        return
+    delta = convdatestring(parameters)
+    timerend = delta + datetime.datetime.now()
+    while timerend > datetime.datetime.now():
+        await reply(message, str(timerend - datetime.datetime.now()))
+        await asyncio.sleep(1)
+    await reply(message, "Timer of **" + parameters + "** finished successfully!")
                     
 def strtodatetime(string):
     return datetime.datetime.strptime(string, '%Y-%m-%d %H:%M:%S.%f')
