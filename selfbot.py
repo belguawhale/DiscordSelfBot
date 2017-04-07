@@ -10,7 +10,7 @@ from io import BytesIO, StringIO
 
 client = discord.Client()
 
-VERSION = '0.1.2'
+VERSION = '0.1.3'
 PREFIX = "//"
 
 MAX_RECURSION_DEPTH = 10
@@ -189,6 +189,67 @@ async def cmd_oldexec(message, parameters, recursion=0):
 @cmd("silentexec", "```\n{0}silentexec <exec string>\n\nSilently executes <exec string> using Python's exec() function.```")
 async def cmd_silentexec(message, parameters, recursion=0):
     output, errorcode = await _exec(message, parameters, recursion)
+
+async def _async(message, parameters, recursion=0):
+    if parameters == '':
+        return (commands['async'][1].format(PREFIX), 1)
+    env = {'message' : message,
+           'parameters' : parameters,
+           'recursion' : recursion,
+           'client' : client,
+           'channel' : message.channel,
+           'author' : message.author,
+           'server' : message.server}
+    env.update(globals())
+    old_stdout = sys.stdout
+    redirected_output = sys.stdout = StringIO()
+    result = None
+    exec_string = "async def _temp_exec():\n"
+    exec_string += '\n'.join(' ' * 4 + line for line in parameters.split('\n'))
+    try:
+        exec(exec_string, env)
+        result = (redirected_output.getvalue(), 0)
+    except Exception:
+        traceback.print_exc()
+        result = (str(traceback.format_exc()), 2)
+    _temp_exec = env['_temp_exec']
+    try:
+        returnval = await _temp_exec()
+        value = redirected_output.getvalue()
+        if returnval == None:
+            result = (value, 0)
+        else:
+            result = (value + '\n' + str(returnval), 0)
+    except Exception:
+        traceback.print_exc()
+        result = (str(traceback.format_exc()), 2)
+    finally:
+        sys.stdout = old_stdout
+    return result
+
+@cmd("async", "```\n{0}async <async string>\n\nExecutes <async string> as a coroutine.```")
+async def cmd_async(message, parameters, recursion=0):
+    output, errorcode = await _async(message, parameters, recursion)
+    if errorcode == 1:
+        await reply(message, output)
+    elif errorcode == 2:
+        await reply(message, "**Async input:**```py\n{}\n```\n**Output (error):**```py\n{}\n```".format(parameters, output))
+    else:
+        await reply(message, "**Async input:**```py\n{}\n```\n**Output:**```py\n{}\n```".format(parameters, output))
+
+@cmd("oldasync", "```\n{0}oldasync <async string>\n\nExecutes <async string> as a coroutine.```")
+async def cmd_oldasync(message, parameters, recursion=0):
+    output, errorcode = await _async(message, parameters, recursion)
+    if errorcode == 1:
+        await reply(message, output)
+    elif errorcode == 2:
+        await reply(message, "```py\n{}\n```".format(output))
+    else:
+        await reply(message, output)
+
+@cmd("silentasync", "```\n{0}silentexec <exec string>\n\nSilently executes <async string> as a coroutine.```")
+async def cmd_silentasync(message, parameters, recursion=0):
+    output, errorcode = await _async(message, parameters, recursion)
 
 @cmd("info", "```\n{0}info takes no arguments\n\nDisplays information on the selfbot.```", "")
 async def cmd_info(message, parameters, recursion=0):
@@ -500,7 +561,24 @@ async def cmd_timer(message, parameters, recursion=0):
         await reply(message, str(timerend - datetime.datetime.now()))
         await asyncio.sleep(1)
     await reply(message, "Timer of **" + parameters + "** finished successfully!")
-                    
+
+@cmd("purge", "```\n{0}purge <number of messages>\n\nPurges messages from the current channel.```")
+async def cmd_purge(message, parameters, recursion=0):
+    if parameters == '':
+        await reply(message, commands['purge'][1].format(PREFIX))
+        return
+    if not parameters.isdigit():
+        await reply(message, "Number of messages to purge must be a positive integer.")
+        return
+    async for msg in client.logs_from(message.channel, limit=int(parameters) + 1):
+        try:
+            await client.delete_message(msg)
+        except:
+            pass
+    success_msg = await client.send_message(message.channel, "Successfully purged **" + parameters + "** messages! :thumbsup:")
+    await asyncio.sleep(2)
+    await client.delete_message(success_msg)
+ 
 def strtodatetime(string):
     return datetime.datetime.strptime(string, '%Y-%m-%d %H:%M:%S.%f')
 

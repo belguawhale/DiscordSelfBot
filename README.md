@@ -11,6 +11,11 @@ The bot only responds to the account the bot is running on, obviously.
 Use `//list` to list all commands, `//alias list` to list all aliases, `//help command` to return help for a command, and `//alias show alias` to show what alias is an alias for.
 
 ## Changelog
+### v0.1.3
+Added: Async command! Similar to exec, except you can run arbitrary code as a coroutine. The variants `//async`, `//oldasync`, and `//silentasync` work as well. Example: `//async await client.add_reaction(message, ":thumbsup:")`
+
+Added: Purge command! You can mass-delete messages with it. It also bypasses the 2-week barrier with bot purging. Note: it will be slower than bot purging.
+
 ### v0.1.2
 Added: Variants of eval and exec. `//oldeval` and `//oldexec` show only the output, and `//silenteval` and `//silentexec` return nothing.
 
